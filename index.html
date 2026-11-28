@@ -53,6 +53,16 @@ h2{margin-top:24px;color:var(--green)}
 summary{cursor:pointer;color:var(--green);font-weight:800}
 .field{box-sizing:border-box;width:100%;background:var(--card);border:1px solid var(--line);border-radius:8px;padding:8px 12px;margin-bottom:12px}
 #cert{width:100%;height:auto;margin-bottom:10px}
+.screen{background:#000;border:1px solid var(--line);border-radius:10px;overflow:hidden;margin-bottom:12px;box-shadow:0 0 18px rgba(0,255,102,.18)}
+.dots{font:12px 'JetBrains Mono',monospace;color:var(--mute);border-bottom:1px solid var(--line);padding:4px 10px;text-align:left}
+#pcode{height:210px;overflow:auto;padding:8px 0;font:14px/1.8 'JetBrains Mono',Cairo,Tahoma,monospace;color:var(--codefg);text-align:left}
+.ln{white-space:pre;padding:0 12px;width:max-content;min-width:100%;box-sizing:border-box;opacity:.5;min-height:1.8em}
+.ln.on{opacity:1;background:rgba(0,255,102,.16);box-shadow:inset 3px 0 0 var(--green)}
+#pterm{margin:0;height:130px;overflow:auto;padding:8px 12px;font:13px/1.7 'JetBrains Mono',Cairo,Tahoma,monospace;color:#fff;text-align:left;white-space:pre-wrap;unicode-bidi:plaintext}
+#pterm.wait{opacity:.35}
+#psay{margin:0;min-height:3.6em}
+.pctl .btn{padding:8px 2px;font-size:13px;white-space:nowrap}
+#pbar{height:5px;background:var(--line);border-radius:5px;overflow:hidden;margin:4px 0 10px}#pbar i{display:block;height:100%;background:var(--green);transition:width .3s}
 /* المقدمة */
 #intro{position:fixed;inset:0;background:#000;z-index:20;transition:opacity .6s;cursor:pointer}
 #intro.out{opacity:0;pointer-events:none}
@@ -201,6 +211,69 @@ function certificate(){
  const make=btn('اعمل الشهادة',()=>{const name=input.value.trim();if(!name){out.textContent='اكتب اسمك الأول';return}
   const c=drawCertificate(name);out.replaceChildren(c,btn('حفظ الصورة',()=>c.toBlob(b=>{const u=URL.createObjectURL(b);el('a',{href:u,download:'pn-mancy-certificate.png'}).click();setTimeout(()=>URL.revokeObjectURL(u),1000)})))});
  app.replaceChildren(back,title,input,el('div',{className:'tools'},make),out)}
+/* ===== الشرح المتحرك: الكود يتكتب، السطر ينوّر، ثم نتيجة التشغيل ===== */
+const OUT=["Hello\n8\n5 + 3\nAli 20", "Ali", "<class 'int'>", "اسمك؟ Ali\nأهلا Ali\nسنك؟ 20\n25", "9 5 14\n3.5\n3\n1\n8\nTrue True\nTrue False\nFalse\nTrue\nFalse", "13\nPYTHON COURSE python course\nP e\nPython\nPython App\n['Python', 'Course']\nAge: 20", "ناجح", "0\n1\n2\n3\n4\n2\n4\n6\n8\n10\n3\n2\n1\n0\n1\n3\n4", "apple\n2 True\napple\nkiwi", "{2, 3}\n{1, 2, 3, 4, 9}", "Ali\nمفيش\nname Ali\ncity Cairo", "أهلا Ali\n{'city': 'Cairo'}", "9 2 16\n[9, 5, 2]\n0 5\n1 2\n2 9\n1 x\n2 y\n['5', '2', '9']\n[5, 9]", "اكتب رقم صح\nخلصنا", "أول سطر\nتاني سطر", "4.0\n1\na\n2026-11-28", "BMW ماشية", "Meow\n0", "", "0\n[1, 2]", "بنشغل hello\nhello", "[('Ali',)]", "['A', 'B']", "Product(name='Pen', price=5)", "1 إضافة، 2 عرض، 0 خروج: 1\nالمهمة: اذاكر بايثون\n1 إضافة، 2 عرض، 0 خروج: 2\n1 اذاكر بايثون\n1 إضافة، 2 عرض، 0 خروج: 0"];
+/* ملاحظات تظهر مع النتيجة */
+const OUT_NOTE={3:'المدخلات هنا مثال: Ali ثم 20',15:'الرقم العشوائي والاختيار والتاريخ بيتغيروا مع كل تشغيل',24:'المدخلات هنا مثال: إضافة مهمة، عرضها، ثم خروج'};
+let stopPlayer=()=>{};
+function player(i){
+ stopPlayer();
+ const x=D[i],total=x.r.length+1;
+ const canSpeak='speechSynthesis' in window&&'SpeechSynthesisUtterance' in window;
+ let step=0,playing=true,speed=1,voice=false,timer=null,run=0;
+ const code=el('div',{id:'pcode',dir:'ltr'}),term=el('pre',{id:'pterm',dir:'ltr'}),say=el('p',{id:'psay'}),count=el('span',{className:'mute',id:'pcount'}),fill=el('i');
+ const alive=()=>code.isConnected;
+ const halt=()=>{clearTimeout(timer);run++;if(canSpeak)speechSynthesis.cancel()};
+ stopPlayer=halt;
+ const playBtn=btn('',()=>{if(!playing&&step===total-1&&playBtn.dataset.end)step=0;playing=!playing;render()});playBtn.id='pplay';
+ const speedBtn=btn('السرعة 1x',()=>{speed=speed===1?1.5:speed===1.5?0.75:1;speedBtn.textContent=`السرعة ${speed}x`;render()});
+ const voiceBtn=btn('🔇 الصوت مقفول',()=>{voice=!voice;voiceBtn.textContent=voice?'🔊 الصوت شغال':'🔇 الصوت مقفول';render()});
+ const move=d=>{step=Math.max(0,Math.min(total-1,step+d));playing=false;render()};
+ const label=()=>{playBtn.textContent=playing?'⏸ إيقاف':'▶ تشغيل'};
+ function render(){
+  halt();const mine=run;label();delete playBtn.dataset.end;
+  const isRun=step===total-1,shown=Math.min(step+1,x.r.length);
+  count.textContent=`خطوة ${step+1} من ${total}`;fill.style.width=(step+1)/total*100+'%';
+  code.replaceChildren(...x.r.slice(0,shown).map(([c],n)=>el('div',{className:'ln'+(!isRun&&n===step?' on':''),textContent:c})));
+  const target=isRun?term:code.lastChild;
+  const full=isRun?(OUT[i]||'(الكود اشتغل ومفيش حاجة اتطبعت)'):x.r[step][0];
+  say.textContent='';
+  if(isRun){rich(say,'دي نتيجة تشغيل كود الدرس كله.'+(OUT_NOTE[i]?' '+OUT_NOTE[i]:''))}else rich(say,x.r[step][1]);
+  term.textContent=isRun?'':'$ ...';term.classList.toggle('wait',!isRun);
+  if(!isRun)code.scrollTop=code.scrollHeight;
+  let typed=0;const chars=[...full],chunk=Math.max(1,Math.ceil(chars.length/90));
+  target.textContent='';
+  const type=()=>{
+   if(mine!==run||!alive())return;
+   typed=Math.min(chars.length,typed+chunk);target.textContent=(isRun?'$ python lesson.py\n':'')+chars.slice(0,typed).join('');
+   if(typed<chars.length){timer=setTimeout(type,32/speed);return}
+   after()};
+  const advance=()=>{if(mine!==run||!alive()||!playing)return;
+   if(step<total-1){step++;render()}else{playing=false;label();playBtn.dataset.end='1'}};
+  const after=()=>{
+   const wait=(1800+say.textContent.length*55)/speed;
+   if(voice&&canSpeak){
+    const u=new SpeechSynthesisUtterance(say.textContent);u.lang='ar-EG';u.rate=speed;
+    let moved=false;const go=()=>{if(moved||mine!==run)return;moved=true;clearTimeout(timer);timer=setTimeout(advance,500)};
+    u.onend=go;speechSynthesis.speak(u);
+    /* لو الجهاز ليس به صوت عربي نكمل بالوقت */
+    timer=setTimeout(go,wait*2+2000)}
+   else timer=setTimeout(advance,wait)};
+  type()}
+ const controls=el('div',{className:'tools pctl',dir:'rtl'},btn('⏮ من الأول',()=>{step=0;playing=true;render()}),btn('→ السابق',()=>move(-1)),playBtn,btn('التالي ←',()=>move(1)));
+ const options=el('div',{className:'tools'},speedBtn,...(canSpeak?[voiceBtn]:[]));
+ const leave=to=>()=>{halt();to()};
+ app.replaceChildren(el('div',{className:'tools'},btn('ارجع للدرس',leave(()=>show(i))),btn('يلا نختبر',leave(()=>quiz(i)))),el('h2',{textContent:`🎬 شرح: ${x.t}`}),count,el('div',{id:'pbar'},fill),
+  el('div',{className:'screen'},el('div',{className:'dots',textContent:'● ● ●  lesson.py',dir:'ltr'}),code),el('div',{className:'panel'},say),el('div',{className:'screen'},el('div',{className:'dots',textContent:'TERMINAL',dir:'ltr'}),term),controls,options);
+ scrollTo(0,0);render()}
+document.addEventListener('visibilitychange',()=>{if(document.hidden&&document.getElementById('pplay')){const b=document.getElementById('pplay');if(b.textContent.includes('إيقاف'))b.click()}});
+const showWithExtras=show;
+show=function(i){
+ stopPlayer();showWithExtras(i);
+ const watch=btn('▶ شاهد الشرح المتحرك',()=>player(i));watch.id='watch';watch.style.width='100%';watch.style.marginBlock='8px';
+ app.querySelector('h2').after(watch)};
+const homeWithExtras=home;
+home=function(){stopPlayer();homeWithExtras()};
 home();
 // الرجوع من قسم Y-CYBER لا يعيد المقدمة
 if(location.hash==='#home'){document.getElementById('intro').remove();history.replaceState(null,'',location.pathname)}
