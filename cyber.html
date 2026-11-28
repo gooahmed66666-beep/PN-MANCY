@@ -1,0 +1,386 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; connect-src 'self' https://ipwho.is; img-src 'self' data:; object-src 'none'; base-uri 'none'; form-action 'none'">
+<meta name="referrer" content="no-referrer">
+<meta name="theme-color" content="#000000">
+<title>Y-CYBER | PN MANCY</title>
+<link rel="icon" href="data:,">
+<style>
+:root{--g:#39ff14;--c:#00f2bf;--r:#ff2e59;--y:#ffd23f;--line:#17451f;--card:#06110a;--text:#d9ffe0}
+*{box-sizing:border-box;margin:0;padding:0}
+[hidden]{display:none!important}
+body{background:#000 radial-gradient(circle at 50% -10%,#082612,#000 55%) fixed;color:var(--text);font-family:system-ui,"Noto Sans Arabic",Tahoma,sans-serif;min-height:100vh;line-height:1.7}
+#intro{position:fixed;inset:0;background:#000;z-index:10;transition:opacity .6s;cursor:pointer}
+#intro.out{opacity:0;pointer-events:none}
+#intro canvas{display:block;width:100%;height:100%}
+header{display:flex;align-items:center;gap:10px;padding:calc(12px + env(safe-area-inset-top)) 16px 12px;border-bottom:1px solid var(--line);position:sticky;top:0;background:#000e;z-index:2}
+.brand{flex:1;text-align:center}.brand b{display:block;color:var(--g);font:700 22px monospace;letter-spacing:4px;text-shadow:0 0 12px var(--g)}
+.brand small{color:var(--c);font:10px monospace;letter-spacing:2px;display:block}
+#net{font-size:11px}
+main{max-width:620px;margin:auto;padding:16px 16px 40px;animation:in .35s}
+@keyframes in{from{opacity:0;transform:translateY(10px)}}
+h2{color:var(--g);font-size:20px;margin-bottom:8px}
+p{margin:6px 0}.muted{color:#8bb596;font-size:13px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px;margin-top:12px;overflow-wrap:anywhere}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px}
+.tile{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px 8px;color:var(--text);text-align:center;font:inherit;cursor:pointer}
+.tile i{display:block;font-style:normal;font-size:28px}.tile span{display:block;font-weight:700}.tile small{color:#8bb596;font-size:11px}
+.tile:active{box-shadow:0 0 18px #39ff1466;border-color:var(--g)}
+button{font-family:inherit}
+.btn,#back{background:#0b2a12;color:var(--g);border:1px solid var(--g);border-radius:10px;padding:10px 16px;font-size:15px;cursor:pointer}
+#back{padding:5px 10px;font-size:13px}
+.btn:disabled{opacity:.5}
+.row{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+input:not([type=checkbox]){width:100%;margin-top:10px;background:#000;border:1px solid var(--line);color:var(--g);border-radius:10px;padding:12px;font:16px monospace}
+input:focus-visible,button:focus-visible{outline:2px solid var(--c)}
+.meter{height:10px;background:#122;border-radius:9px;overflow:hidden;margin-top:12px}.meter i{display:block;height:100%;width:0;transition:.3s}
+.ltr{direction:ltr;text-align:left;font-family:monospace}
+.kv{display:flex;justify-content:space-between;gap:12px;border-bottom:1px dashed var(--line);padding:5px 0}.kv span:last-child{text-align:left}
+.good{color:var(--g)}.warn{color:var(--y)}.bad{color:var(--r)}
+li{margin-inline-start:20px}
+label.check{display:flex;gap:10px;padding:8px 0;align-items:flex-start}label.check input{margin-top:7px;accent-color:var(--g)}
+#term{background:#000;height:52vh;overflow:auto;white-space:pre-wrap;direction:ltr;text-align:left;font:13px monospace;color:var(--g)}
+#term div{unicode-bidi:plaintext}
+pre{white-space:pre-wrap;font:13px/1.8 monospace;unicode-bidi:plaintext}
+@media (prefers-reduced-motion:reduce){main{animation:none}}
+.lessons{color:var(--g);border:1px solid var(--g);border-radius:10px;padding:4px 8px;font-size:12px;text-decoration:none;white-space:nowrap}
+</style>
+</head>
+<body>
+<header><button id="back" hidden>→ رجوع</button><div class="brand"><b dir="ltr">Y-CYBER</b><small dir="ltr">CYBERSECURITY TOOLKIT</small></div><span id="net"></span><a class="lessons" href="index.html#home">🐍 الدروس</a></header>
+<main id="view"></main>
+<script>
+/* منطق الأدوات: دوال خالصة بدون واجهة، وكلها تعمل محلياً. */
+'use strict';
+const Core = (() => {
+  const COMMON = ['password','123456','12345678','123456789','qwerty','111111','123123','abc123','iloveyou','admin','welcome','monkey','dragon','letmein','football','000000','654321','superman','pass','love'];
+
+  function analyzePassword(pw) {
+    if (!pw) return null;
+    let pool = 0;
+    if (/[a-z]/.test(pw)) pool += 26;
+    if (/[A-Z]/.test(pw)) pool += 26;
+    if (/\d/.test(pw)) pool += 10;
+    if (/[^A-Za-z0-9]/.test(pw)) pool += 33;
+    const chars = [...pw];
+    let bits = chars.length * Math.log2(pool);
+    const tips = [];
+    const lower = pw.toLowerCase();
+    const stem = lower.replace(/[^a-z]+$/, '');
+    if (COMMON.includes(lower) || COMMON.includes(stem)) { bits = Math.min(bits, 12); tips.push('مبنية على كلمة مرور شائعة جداً'); }
+    if (/(.)\1\1/.test(pw)) { bits *= .7; tips.push('تجنب تكرار نفس الحرف'); }
+    if (/(0123|1234|2345|3456|4567|5678|6789|abcd|qwer|asdf|zxcv)/.test(lower)) { bits *= .7; tips.push('تجنب التسلسلات المتوقعة'); }
+    if (new Set(chars).size <= 3) bits = Math.min(bits, 18);
+    if (/^\d+$/.test(pw)) tips.push('أرقام فقط: أضف حروفاً ورموزاً');
+    if (/(19|20)\d\d/.test(pw)) { bits -= 8; tips.push('تجنب السنوات وتواريخ الميلاد'); }
+    if (chars.length < 12) tips.push('اجعل الطول 12 حرفاً على الأقل');
+    bits = Math.max(0, Math.round(bits));
+    let level = bits < 28 ? 0 : bits < 45 ? 1 : bits < 65 ? 2 : 3;
+    if (chars.length < 8) level = Math.min(level, 1);
+    return { bits, level, label: ['ضعيفة جداً','ضعيفة','متوسطة','قوية'][level], tips };
+  }
+
+  function generatePassword(length = 18) {
+    const set = 'abcdefghijkmnopqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789!@#$%^&*-_=+?';
+    const limit = 256 - (256 % set.length);
+    const byte = new Uint8Array(1);
+    for (;;) {
+      let out = '';
+      while (out.length < length) { crypto.getRandomValues(byte); if (byte[0] < limit) out += set[byte[0] % set.length]; }
+      if (/[a-z]/.test(out) && /[A-Z]/.test(out) && /\d/.test(out) && /[^A-Za-z0-9]/.test(out)) return out;
+    }
+  }
+
+  function parseIPv4(text) {
+    const parts = text.split('.');
+    if (parts.length !== 4 || !parts.every(p => /^(0|[1-9]\d{0,2})$/.test(p) && +p <= 255)) return null;
+    return parts.map(Number);
+  }
+  const isIPv6 = t => { if (!/^[0-9a-f:.]+$/i.test(t) || !t.includes(':')) return false; try { new URL(`http://[${t}]/`); return true; } catch { return false; } };
+
+  function classifyIPv4(ip) {
+    const p = parseIPv4(ip); if (!p) return null;
+    const [a, b] = p;
+    if (a === 10 || (a === 172 && b >= 16 && b <= 31) || (a === 192 && b === 168)) return 'خاص (شبكة محلية)';
+    if (a === 127) return 'عنوان الجهاز نفسه (Loopback)';
+    if (a === 169 && b === 254) return 'عنوان تلقائي محلي (Link-local)';
+    if (a === 100 && b >= 64 && b <= 127) return 'شبكة مشغل مشتركة (CGNAT)';
+    if (a === 0 || a >= 224) return 'محجوز أو متعدد البث';
+    return 'خارج النطاقات الخاصة الشائعة (غالباً عام)';
+  }
+
+  function subnet(text) {
+    const [ip, bitsText, extra] = text.trim().split('/');
+    const p = parseIPv4(ip || '');
+    if (!p || extra !== undefined || !/^\d{1,2}$/.test(bitsText || '') || +bitsText > 32) return null;
+    const bits = +bitsText;
+    const value = p.reduce((n, x) => n * 256 + x, 0);
+    const size = 2 ** (32 - bits);
+    const net = Math.floor(value / size) * size;
+    const text4 = n => [24,16,8,0].map(s => Math.floor(n / 2 ** s) % 256).join('.');
+    const last = net + size - 1;
+    const small = bits >= 31;
+    return { network: text4(net), mask: text4(2 ** 32 - size), broadcast: small ? 'لا يوجد' : text4(last),
+      first: text4(small ? net : net + 1), last: text4(small ? last : last - 1), hosts: small ? size : size - 2 };
+  }
+
+  function checkURL(input) {
+    let raw = input.trim();
+    if (!raw || /\s/.test(raw)) return null;
+    const hadScheme = /^[a-z][a-z0-9+.-]*:\/\//i.test(raw);
+    if (/^(javascript|data|file|vbscript):/i.test(raw)) return { score: 100, host: '-', verdict: 'خطر مرتفع', level: 'bad', findings: ['نوع رابط يمكنه تنفيذ محتوى أو فتح ملفات'] };
+    let url;
+    try { url = new URL(hadScheme ? raw : 'https://' + raw); } catch { return null; }
+    if (!/^https?:$/.test(url.protocol)) return null;
+    const host = url.hostname.replace(/\.$/, '');
+    if (!host.includes('.') && !host.startsWith('[')) return null;
+    const findings = []; let score = 0;
+    const flag = (points, text) => { score += points; findings.push(text); };
+    const ipHost = parseIPv4(host) || host.startsWith('[');
+    if (hadScheme && url.protocol === 'http:') flag(20, 'الاتصال غير مشفر (HTTP)');
+    if (url.username || url.password) flag(40, 'يحتوي على @ قبل اسم الموقع لإخفاء الوجهة الحقيقية');
+    if (ipHost) flag(30, 'يستخدم عنوان IP بدلاً من اسم نطاق');
+    if (host.split('.').some(x => x.startsWith('xn--'))) flag(35, 'نطاق بحروف دولية قد تقلد حروفاً مشهورة (Punycode)');
+    if (!ipHost && host.split('.').length > 4) flag(15, 'نطاقات فرعية كثيرة');
+    if (host.split('-').length > 3) flag(15, 'شرطات كثيرة في اسم النطاق');
+    if (/\.(zip|mov|tk|ml|ga|cf|gq|top|xyz|click|country)$/.test(host)) flag(15, 'امتداد نطاق يستدعي الانتباه');
+    if (/^(bit\.ly|tinyurl\.com|t\.co|goo\.gl|is\.gd|cutt\.ly|ow\.ly|rb\.gy)$/.test(host)) flag(25, 'رابط مختصر يخفي الوجهة النهائية');
+    if (/(login|verify|secure|account|update|confirm|wallet|bank|gift|free|prize)/i.test(host + url.pathname)) flag(15, 'كلمات شائعة في صفحات التصيد');
+    const brands = { paypal:'paypal.com', facebook:'facebook.com', google:'google.com', instagram:'instagram.com', apple:'apple.com', microsoft:'microsoft.com', whatsapp:'whatsapp.com' };
+    for (const [name, real] of Object.entries(brands))
+      if (host.includes(name) && host !== real && !host.endsWith('.' + real)) flag(25, `اسم "${name}" ظاهر في نطاق غير ${real} (تأكد من أنه رسمي)`);
+    if (raw.length > 100) flag(10, 'الرابط طويل جداً');
+    if (url.port) flag(10, 'يستخدم منفذاً غير معتاد');
+    score = Math.min(100, score);
+    const level = score >= 50 ? 'bad' : score >= 20 ? 'warn' : 'good';
+    return { score, host, level, findings, verdict: { bad:'خطر مرتفع', warn:'مشبوه: توخَّ الحذر', good:'لا توجد مؤشرات واضحة (وهذا لا يضمن أمانه)' }[level] };
+  }
+
+  const hex = buffer => [...new Uint8Array(buffer)].map(b => b.toString(16).padStart(2, '0')).join('');
+  const sha256 = async buffer => hex(await crypto.subtle.digest('SHA-256', buffer));
+
+  return { analyzePassword, generatePassword, parseIPv4, isIPv6, classifyIPv4, subnet, checkURL, sha256 };
+})();
+if (typeof module !== 'undefined') module.exports = Core;
+
+</script>
+<script>
+/* واجهة التطبيق. كل النصوص تضاف عبر textContent لمنع حقن HTML. */
+'use strict';
+(() => {
+const view = document.getElementById('view'), back = document.getElementById('back');
+const store = {
+  get(k, fallback) { try { return JSON.parse(localStorage.getItem('yc.' + k)) ?? fallback; } catch { return fallback; } },
+  set(k, v) { try { localStorage.setItem('yc.' + k, JSON.stringify(v)); } catch {} }
+};
+let log = store.get('log', []);
+function record(tool, summary) { log.push({ time: new Date().toLocaleString('en-GB'), tool, summary }); log = log.slice(-100); store.set('log', log); }
+
+function el(tag, props = {}, ...kids) {
+  const node = Object.assign(document.createElement(tag), props);
+  node.append(...kids.filter(k => k != null)); return node;
+}
+const card = (...kids) => el('div', { className: 'card' }, ...kids);
+const note = t => el('p', { className: 'muted', textContent: t });
+const line = (t, cls = '') => el('p', { className: cls, textContent: t });
+const button = (t, onclick) => el('button', { className: 'btn', type: 'button', textContent: t, onclick });
+const field = (placeholder, type = 'text') => el('input', { placeholder, type, className: 'ltr', autocomplete: 'off', spellcheck: false, autocapitalize: 'off' });
+const kv = (k, v) => el('div', { className: 'kv' }, el('span', { textContent: k }), el('span', { textContent: String(v ?? '-'), dir: 'auto' }));
+const onEnter = (input, fn) => input.addEventListener('keydown', e => { if (e.key === 'Enter') fn(); });
+
+async function copy(text, btn) {
+  const old = btn.textContent;
+  try { await navigator.clipboard.writeText(text); btn.textContent = 'تم النسخ ✓'; } catch { btn.textContent = 'تعذر النسخ'; }
+  setTimeout(() => btn.textContent = old, 1500);
+}
+
+/* ---------- 1. كلمات المرور ---------- */
+function password() {
+  const input = field('اكتب كلمة المرور', 'password'), bar = el('i'), out = card(line('النتيجة تظهر هنا', 'muted'));
+  const show = () => {
+    const r = Core.analyzePassword(input.value);
+    bar.style.width = r ? (r.level + 1) * 25 + '%' : '0';
+    bar.style.background = r ? ['#ff2e59','#ff7b2e','#ffd23f','#39ff14'][r.level] : '';
+    out.replaceChildren(...(r ? [kv('القوة', r.label), kv('التقدير التقريبي (bits)', r.bits), ...r.tips.map(t => el('li', { textContent: t }))] : [line('النتيجة تظهر هنا', 'muted')]));
+    return r;
+  };
+  input.oninput = show;
+  const made = el('p', { className: 'ltr good' }), copyBtn = button('نسخ', () => copy(made.textContent, copyBtn));
+  copyBtn.hidden = true;
+  return [note('التحليل يتم داخل جهازك. كلمة المرور لا تُرسل ولا تُحفظ. النتيجة تقديرية.'), input,
+    el('div', { className: 'row' }, button('إظهار / إخفاء', () => input.type = input.type === 'password' ? 'text' : 'password'),
+      button('أضف للتقرير', () => { const r = show(); if (r) { record('Password', `${r.label} (${r.bits} bits)`); out.append(line('أضيفت النتيجة بدون كلمة المرور ✓', 'good')); } })),
+    el('div', { className: 'meter' }, bar), out,
+    card(button('ولّد كلمة مرور قوية', () => { made.textContent = Core.generatePassword(); copyBtn.hidden = false; }), made, copyBtn)];
+}
+
+/* ---------- 2. الشبكة ---------- */
+function network() {
+  const c = navigator.connection, info = card(kv('الاتصال', navigator.onLine ? 'متصل' : 'غير متصل'),
+    kv('نوع الشبكة التقديري', c?.effectiveType), kv('السرعة التقديرية (Mbps)', c?.downlink), kv('زمن الاستجابة التقديري (ms)', c?.rtt));
+  const input = field('192.168.1.10/24'), out = card(line('أدخل عنواناً مع قناع الشبكة', 'muted'));
+  const run = () => {
+    const r = Core.subnet(input.value);
+    if (!r) return out.replaceChildren(line('صيغة غير صحيحة. مثال: 192.168.1.10/24', 'bad'));
+    out.replaceChildren(kv('عنوان الشبكة', r.network), kv('القناع', r.mask), kv('أول جهاز', r.first), kv('آخر جهاز', r.last), kv('Broadcast', r.broadcast), kv('عدد العناوين المتاحة', r.hosts));
+    record('Network', `${input.value.trim()} -> ${r.network}, ${r.hosts} hosts`);
+  };
+  onEnter(input, run);
+  return [note('المتصفح لا يسمح بفحص أجهزة الشبكة أو منافذها، لذلك لا تعرض هذه الأداة قائمة أجهزة. لمعرفة المتصلين بشبكتك افتح صفحة إعدادات الراوتر الذي تملكه.'), info,
+    el('h2', { textContent: 'حاسبة الشبكة الفرعية' }), input, el('div', { className: 'row' }, button('احسب', run)), out];
+}
+
+/* ---------- 3. معلومات IP ---------- */
+function ipInfo() {
+  const input = field('اتركه فارغاً لعنوانك'), out = card(line('لا يتم أي اتصال قبل الضغط على الزر', 'muted'));
+  const btn = button('اعرض المعلومات', run);
+  async function run() {
+    const ip = input.value.trim();
+    if (ip && !Core.parseIPv4(ip) && !Core.isIPv6(ip)) return out.replaceChildren(line('عنوان IP غير صحيح', 'bad'));
+    const kind = ip && Core.classifyIPv4(ip);
+    if (kind && !kind.includes('غالباً عام')) return out.replaceChildren(kv('العنوان', ip), kv('النوع', kind), note('تم التصنيف محلياً بدون إرسال.'));
+    btn.disabled = true; out.replaceChildren(line('جارٍ الاتصال…'));
+    const abort = new AbortController(), timer = setTimeout(() => abort.abort(), 10000);
+    try {
+      const res = await fetch('https://ipwho.is/' + encodeURIComponent(ip), { signal: abort.signal });
+      if (res.status === 429) throw new Error('تم تجاوز حد الطلبات، حاول لاحقاً');
+      if (!res.ok) throw new Error('الخدمة ردت بخطأ ' + res.status);
+      const d = await res.json();
+      if (!d.success) throw new Error(d.message || 'لا توجد معلومات');
+      out.replaceChildren(kv('IP', d.ip), kv('النوع', d.type), kv('الدولة', d.country), kv('المنطقة', d.region), kv('المدينة (تقريبية)', d.city), kv('مزود الخدمة', d.connection?.isp), kv('المنطقة الزمنية', d.timezone?.id));
+      record('IP', `${d.ip} - ${d.country || '-'} - ${d.connection?.isp || '-'}`);
+    } catch (e) {
+      out.replaceChildren(line(e.name === 'AbortError' || e.name === 'TypeError' ? 'تعذر الوصول للخدمة. تأكد من الإنترنت.' : e.message, 'bad'));
+    } finally { clearTimeout(timer); btn.disabled = false; }
+  }
+  onEnter(input, run);
+  return [note('هذه الأداة وحدها تتصل بالإنترنت: عند الضغط يُرسل العنوان المطلوب إلى خدمة ipwho.is (وهي ترى أيضاً عنوانك). الموقع الجغرافي تقريبي.'), input, el('div', { className: 'row' }, btn), out];
+}
+
+/* ---------- 4. الروابط ---------- */
+function urlCheck() {
+  const input = field('https://example.com'), out = card(line('الصق الرابط ولا تفتحه', 'muted'));
+  const run = () => {
+    const r = Core.checkURL(input.value);
+    if (!r) return out.replaceChildren(line('رابط غير صالح', 'bad'));
+    out.replaceChildren(el('h2', { className: r.level, textContent: r.verdict }), kv('النطاق الحقيقي', r.host), kv('درجة المخاطر', r.score + ' / 100'), ...r.findings.map(t => el('li', { textContent: t })));
+    record('URL', `${r.host} - ${r.score}/100`);
+  };
+  onEnter(input, run);
+  return [note('تحليل محلي لشكل الرابط فقط. لا يتم فتح الرابط ولا فحص محتوى الموقع أو سمعته.'), input, el('div', { className: 'row' }, button('افحص الرابط', run)), out];
+}
+
+/* ---------- 5. بصمة الملفات ---------- */
+function fileHash() {
+  const input = el('input', { type: 'file' }), expected = field('الصق SHA-256 الأصلي للمقارنة (اختياري)'), out = card(line('اختر ملفاً (حتى 200 ميجابايت)', 'muted'));
+  let result = null, job = 0;
+  const show = () => {
+    if (!result) return;
+    const want = expected.value.trim().toLowerCase();
+    const copyBtn = button('نسخ البصمة', () => copy(result.hash, copyBtn));
+    out.replaceChildren(kv('الملف', result.name), kv('الحجم (bytes)', result.size), el('p', { className: 'ltr good', textContent: result.hash }),
+      want ? line(want === result.hash ? 'البصمة مطابقة ✓' : 'البصمة غير مطابقة ✗', want === result.hash ? 'good' : 'bad') : null, copyBtn);
+  };
+  input.onchange = async () => {
+    const f = input.files[0], mine = ++job; result = null; if (!f) return;
+    if (f.size > 200 * 1024 * 1024) return out.replaceChildren(line('الملف أكبر من 200 ميجابايت', 'bad'));
+    if (!crypto.subtle) return out.replaceChildren(line('يلزم فتح التطبيق عبر https', 'bad'));
+    out.replaceChildren(line('جارٍ الحساب…'));
+    try {
+      const hash = await Core.sha256(await f.arrayBuffer());
+      if (mine !== job) return;
+      result = { name: f.name, size: f.size, hash }; show(); record('Hash', `${f.name}: ${hash}`);
+    } catch { if (mine === job) out.replaceChildren(line('تعذر قراءة الملف', 'bad')); }
+  };
+  expected.oninput = show;
+  return [note('الملف يُقرأ داخل جهازك ولا يُرفع. تطابق البصمة يعني تطابق الملف مع الأصل، ولا يعني أنه خالٍ من الفيروسات.'), input, expected, out];
+}
+
+/* ---------- 6. مركز الأمان ---------- */
+const CHECKS = ['فعّلت التحقق بخطوتين للبريد وحسابات التواصل','أستخدم كلمة مرور مختلفة لكل حساب','أستخدم مدير كلمات مرور','قفل الشاشة مفعل','النظام والتطبيقات محدثة','لا أثبّت تطبيقات من مصادر مجهولة','راجعت أذونات التطبيقات','لدي نسخة احتياطية حديثة','غيّرت كلمة مرور الراوتر الافتراضية','الواي فاي يستخدم WPA2 أو WPA3'];
+const score = () => { const s = store.get('checks', []); return Math.round(CHECKS.filter((_, i) => s[i]).length / CHECKS.length * 100); };
+function center() {
+  const saved = store.get('checks', []), total = el('h2'), bar = el('i');
+  const refresh = () => { const s = score(); total.textContent = `درجة حمايتك: ${s}%`; bar.style.width = s + '%'; bar.style.background = s < 40 ? '#ff2e59' : s < 70 ? '#ffd23f' : '#39ff14'; };
+  const items = CHECKS.map((t, i) => { const box = el('input', { type: 'checkbox', checked: !!saved[i] }); box.onchange = () => { saved[i] = box.checked; store.set('checks', saved); refresh(); }; return el('label', { className: 'check' }, box, el('span', { textContent: t })); });
+  refresh();
+  return [note('التقييم مبني على إجاباتك أنت، والتطبيق لا يفحص إعدادات الهاتف.'), total, el('div', { className: 'meter' }, bar), card(...items),
+    card(el('h2', { textContent: 'نصائح' }), ...['لا تشارك رمز التحقق (OTP) مع أي شخص.','تأكد من اسم النطاق قبل إدخال أي بيانات.','الرسالة التي تستعجلك أو تهددك غالباً محاولة خداع.','إذا اشتبهت في اختراق حساب: غيّر كلمة المرور من جهاز موثوق وأنهِ الجلسات الأخرى.'].map(t => el('li', { textContent: t })))];
+}
+
+/* ---------- 8. التقرير ---------- */
+function reportText() {
+  return ['Y-CYBER SECURITY REPORT', 'التاريخ: ' + new Date().toLocaleString('en-GB'), `درجة قائمة الحماية (حسب إجاباتك): ${score()}%`, `عدد النتائج: ${log.length}`, '----------------------------',
+    ...(log.length ? log.map(e => `[${e.time}] ${e.tool}: ${e.summary}`) : ['لا توجد نتائج بعد.'])].join('\n');
+}
+function report() {
+  const pre = el('pre', { textContent: reportText() }), copyBtn = button('نسخ', () => copy(pre.textContent, copyBtn));
+  return [note('التقرير محفوظ على جهازك فقط. قد يحتوي على عناوين IP وأسماء ملفات، فراجعه قبل مشاركته.'),
+    el('div', { className: 'row' }, button('تنزيل TXT', () => { const url = URL.createObjectURL(new Blob(['﻿' + pre.textContent], { type: 'text/plain;charset=utf-8' })); el('a', { href: url, download: 'y-cyber-report.txt' }).click(); setTimeout(() => URL.revokeObjectURL(url), 1000); }), copyBtn,
+      button('مسح السجل', () => { if (confirm('مسح كل النتائج المحفوظة؟')) { log = []; store.set('log', log); pre.textContent = reportText(); } })), card(pre)];
+}
+
+/* ---------- 7. الطرفية: أوامر داخلية ثابتة، بدون eval ---------- */
+let history = ['Y-CYBER terminal. Type: help'];
+function terminal() {
+  const screen = el('div', { id: 'term', className: 'card' }), input = field('help');
+  const paint = () => { screen.replaceChildren(...history.map(t => el('div', { textContent: t }))); screen.scrollTop = screen.scrollHeight; };
+  const commands = {
+    help: () => 'help, clear, date, status, score, genpass\nurl <link>\nsubnet <ip/bits>\niptype <ipv4>\nreport\nopen <password|network|ip|url|hash|center|report>\nabout',
+    about: () => 'Y-CYBER Cybersecurity Toolkit. Defensive tools only.',
+    date: () => new Date().toString(),
+    status: () => (navigator.onLine ? 'online' : 'offline') + `, saved results: ${log.length}`,
+    score: () => score() + '%',
+    genpass: () => Core.generatePassword(),
+    url: a => { const r = Core.checkURL(a); return r ? [`${r.host}: ${r.score}/100 - ${r.verdict}`, ...r.findings].join('\n') : 'usage: url <link>'; },
+    subnet: a => { const r = Core.subnet(a); return r ? Object.entries(r).map(([k, v]) => `${k}: ${v}`).join('\n') : 'usage: subnet 192.168.1.10/24'; },
+    iptype: a => Core.classifyIPv4(a) || 'usage: iptype 10.0.0.1',
+    report: () => reportText(),
+    open: a => { if (!Object.hasOwn(pages, a)) return 'unknown page'; location.hash = a; return 'opening...'; }
+  };
+  onEnter(input, run);
+  function run() {
+    const raw = input.value.trim(); if (!raw) return; input.value = '';
+    const [name, ...rest] = raw.split(/\s+/), cmd = name.toLowerCase();
+    if (cmd === 'clear') history = []; else history.push('> ' + raw, Object.hasOwn(commands, cmd) ? commands[cmd](rest.join(' ')) : 'unknown command. type: help');
+    history = history.slice(-200); paint();
+  }
+  paint();
+  return [screen, input, el('div', { className: 'row' }, button('تنفيذ', run))];
+}
+
+const pages = {
+  password: ['🔑', 'محلل كلمات المرور', 'تحليل وتوليد محلي', password],
+  network: ['📡', 'أدوات الشبكة', 'حالة الاتصال وحاسبة', network],
+  ip: ['🌐', 'معلومات IP', 'يحتاج إنترنت', ipInfo],
+  url: ['🔗', 'فاحص الروابط', 'مؤشرات التصيد', urlCheck],
+  hash: ['🧬', 'بصمة الملفات', 'SHA-256', fileHash],
+  center: ['🛡️', 'مركز الأمان', 'قائمة ونصائح', center],
+  terminal: ['💻', 'Terminal', 'أوامر داخلية', terminal],
+  report: ['📄', 'التقرير الأمني', 'عرض وتنزيل', report]
+};
+function home() {
+  const ready = ['password','url','center','terminal','report', ...(crypto.subtle ? ['hash'] : [])].length;
+  return [card(el('h2', { textContent: '● لوحة التحكم' }), kv('أدوات تعمل بدون إنترنت متاحة', ready), kv('نتائج محفوظة', log.length), kv('درجة قائمة الحماية', score() + '%'), kv('الإنترنت', navigator.onLine ? 'متصل' : 'غير متصل')),
+    el('div', { className: 'grid' }, ...Object.entries(pages).map(([id, [icon, name, sub]]) => el('button', { className: 'tile', type: 'button', onclick: () => location.hash = id }, el('i', { textContent: icon }), el('span', { textContent: name }), el('small', { textContent: sub }))))];
+}
+function render() {
+  const id = location.hash.slice(1), page = Object.hasOwn(pages, id) ? pages[id] : null;
+  back.hidden = !page;
+  view.replaceChildren(...(page ? [el('h2', { textContent: page[1] }), ...page[3]()] : home()));
+  view.style.animation = 'none'; void view.offsetWidth; view.style.animation = '';
+  scrollTo(0, 0);
+}
+const online = () => { const n = document.getElementById('net'); n.textContent = navigator.onLine ? '● متصل' : '● أوفلاين'; n.className = navigator.onLine ? 'good' : 'warn'; };
+back.onclick = () => location.hash = '';
+addEventListener('hashchange', render);
+addEventListener('online', online); addEventListener('offline', online);
+online(); render();
+})();
+
+</script>
+</body>
+</html>
