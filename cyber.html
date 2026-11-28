@@ -382,5 +382,9 @@ online(); render();
 })();
 
 </script>
+<script>
+try{const t={blue:['#2abeff','#7fe6ff','#17435c','#06121c'],purple:['#be78ff','#e0b8ff','#43275e','#120a1c'],red:['#ff4d5e','#ffab9c','#5e222a','#1a0709']}[JSON.parse(localStorage.getItem('pn.theme'))];
+if(t)['--g','--c','--line','--card'].forEach((k,i)=>document.documentElement.style.setProperty(k,t[i]))}catch(e){}
+</script>
 </body>
 </html>
