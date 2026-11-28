@@ -48,6 +48,11 @@ h2{margin-top:24px;color:var(--green)}
 /* ظهور بالترتيب */
 .in{animation:in .45s ease both;animation-delay:calc(var(--n)*70ms)}
 @keyframes in{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:none}}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:10px 12px;margin-bottom:12px}
+.tools{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 14px}.tools .btn{flex:1}
+summary{cursor:pointer;color:var(--green);font-weight:800}
+.field{box-sizing:border-box;width:100%;background:var(--card);border:1px solid var(--line);border-radius:8px;padding:8px 12px;margin-bottom:12px}
+#cert{width:100%;height:auto;margin-bottom:10px}
 /* المقدمة */
 #intro{position:fixed;inset:0;background:#000;z-index:20;transition:opacity .6s;cursor:pointer}
 #intro.out{opacity:0;pointer-events:none}
@@ -123,6 +128,79 @@ function quiz(i){
   result.scrollIntoView({block:'center'})};
  app.replaceChildren(el('button',{className:'btn',textContent:'ارجع للدرس',onclick:()=>show(i)}),el('h2',{textContent:`اختبار: ${x.t}`}),...cards,result,el('div',{className:'nav'},check),after);
  stagger();scrollTo(0,0)}
+/* ===== إضافات: كمّل من مكانك، المفضلة، النقاط، اكشف الخدعة، الشهادة ===== */
+const read=(k,d)=>{try{return JSON.parse(localStorage.getItem('pn.'+k))??d}catch(e){return d}};
+const write=(k,v)=>{try{localStorage.setItem('pn.'+k,JSON.stringify(v))}catch(e){}};
+let favs=read('favs',[]),last=read('last',null),streak=read('streak',{day:'',count:0}),best=read('best',0);
+const dayKey=(back=0)=>{const d=new Date();d.setDate(d.getDate()-back);return `${d.getFullYear()}-${d.getMonth()+1}-${d.getDate()}`};
+function visit(){if(streak.day===dayKey())return;streak={day:dayKey(),count:streak.day===dayKey(1)?streak.count+1:1};write('streak',streak)}
+const days=()=>streak.day===dayKey()||streak.day===dayKey(1)?streak.count:0;
+const points=()=>new Set(done).size*10+best*5;
+const level=p=>p>=250?'محترف 🏆':p>=150?'متقدم 🚀':p>=60?'متعلّم 📘':'مبتدئ 🌱';
+const finished=()=>D.every((x,i)=>done.includes(i));
+const btn=(text,onclick)=>el('button',{className:'btn',type:'button',textContent:text,onclick});
+
+const baseShow=show;
+show=function(i){
+ baseShow(i);visit();last=i;write('last',i);
+ const label=()=>favs.includes(i)?'★ في المفضلة (اضغط للإزالة)':'☆ ضيف للمفضلة';
+ const fav=btn(label(),()=>{favs=favs.includes(i)?favs.filter(n=>n!==i):[...favs,i];write('favs',favs);fav.textContent=label()});
+ fav.id='fav';app.querySelector('h2').after(el('div',{},fav))};
+
+const baseHome=home;
+home=function(){
+ baseHome();
+ const stats=el('div',{className:'panel',id:'stats'},el('b',{textContent:`المستوى: ${level(points())}`}),el('div',{className:'mute',textContent:`⭐ النقاط: ${points()}  |  🔥 أيام متتالية: ${days()}`}));
+ const tools=el('div',{className:'tools'},btn('🎯 اكشف الخدعة',game),btn('🎓 شهادتي',certificate));
+ if(last!==null&&D[last]){const r=btn(`▶ كمّل من مكانك: ${D[last].t}`,()=>show(last));r.style.flexBasis='100%';tools.prepend(r)}
+ const extra=[stats,tools],list=favs.filter(i=>D[i]);
+ if(list.length)extra.push(el('details',{className:'panel'},el('summary',{textContent:`★ المفضلة (${list.length})`}),...list.map(i=>el('button',{className:'item',onclick:()=>show(i)},el('span',{textContent:i+1}),el('span',{textContent:D[i].t})))));
+ app.querySelector('#bar').after(...extra)};
+
+/* أمثلة تدريبية وهمية: [الرسالة، خدعة؟، السبب] */
+const CASES=[
+ ['رسالة: "مبروك! كسبت موبايل. ادفع مصاريف الشحن خلال 10 دقايق من هنا: http://free-gift.example"',true,'جايزة لم تشترك فيها، واستعجال، وطلب فلوس.'],
+ ['صاحبك بيقولك: "ابعتلي الكود اللي وصلك على موبايلك حالاً، بعتهولك بالغلط"',true,'كود التحقق لا يُرسل لأي شخص. ممكن يكون حساب صاحبك مسروق.'],
+ ['أنت طلبت تغيير كلمة السر بنفسك، ففتحت التطبيق الرسمي وغيرتها من الإعدادات',false,'أنت اللي بدأت الطلب، واستخدمت التطبيق الرسمي.'],
+ ['موقع البنك الرسمي هو mybank.example ووصلك رابط: https://mybank.example.login-check.test',true,'النطاق الحقيقي هو login-check.test، واسم البنك مجرد جزء قبله.'],
+ ['تنبيه تحديث ظهر داخل متجر التطبيقات الرسمي على موبايلك',false,'المتجر الرسمي هو المكان الآمن المعتاد للتحديث.'],
+ ['شخص يقول إنه من الدعم الفني ويطلب كلمة السر عشان "يصلّح حسابك"',true,'الدعم الحقيقي لا يحتاج كلمة سرك.'],
+ ['رسالة تطلب تثبيت ملف APK من رابط عشان تتابع شحنتك',true,'تثبيت ملف من رابط مجهول قد يزرع برنامجاً ضاراً.'],
+ ['مدير كلمات المرور اقترح عليك كلمة سر طويلة ومختلفة لحساب جديد',false,'كلمة طويلة وغير مكررة عادة أمان ممتازة.'],
+ ['مديرك "بيكلمك" من رقم جديد ويطلب تحويل فلوس فوراً وبسرية',true,'اتأكد بالاتصال على الرقم المعروف قبل أي تصرف.'],
+ ['كتبت بنفسك عنوان الموقع الذي تعرفه، وراجعت اسم النطاق قبل تسجيل الدخول',false,'كتابة العنوان ومراجعة النطاق تقلل خطر الصفحات المزيفة.']
+];
+function game(){
+ const order=shuffle(CASES.map((c,i)=>i));let n=0,score=0;
+ const next=()=>{
+  if(n===order.length){
+   if(score>best){best=score;write('best',best)}
+   app.replaceChildren(btn('كل الدروس',home),el('h2',{textContent:`نتيجتك ${score} من ${order.length}`}),el('p',{textContent:`أفضل نتيجة: ${best}. كل إجابة في أفضل نتيجة = 5 نقاط.`}),btn('العب تاني',game));return}
+  const [text,trick,why]=CASES[order[n]],verdict=el('p',{className:'result',role:'status'}),after=el('div',{className:'nav'});
+  const answer=pick=>{choices.querySelectorAll('button').forEach(b=>b.disabled=true);const good=pick===trick;score+=good;
+   verdict.textContent=(good?'✓ صح. ':'✗ غلط. ')+(trick?'دي مشبوهة: ':'دي آمنة: ')+why;
+   after.append(btn(n===order.length-1?'اعرض النتيجة':'التالي',()=>{n++;next()}))};
+  const choices=el('div',{className:'tools'},btn('✅ آمنة',()=>answer(false)),btn('⚠️ مشبوهة',()=>answer(true)));
+  app.replaceChildren(btn('كل الدروس',home),el('h2',{textContent:`اكشف الخدعة (${n+1}/${order.length})`}),el('p',{className:'mute',textContent:'كل الأمثلة وهمية للتدريب.'}),el('div',{className:'panel'},rich(el('p',{}),text)),choices,verdict,after);scrollTo(0,0)};
+ next()}
+
+function drawCertificate(name){
+ const c=el('canvas',{width:1200,height:850,id:'cert'}),x=c.getContext('2d');
+ x.fillStyle='#050a07';x.fillRect(0,0,1200,850);x.strokeStyle='#00ff66';x.lineWidth=8;x.strokeRect(30,30,1140,790);
+ x.textAlign='center';x.direction='rtl';
+ const line=(t,y,size,color,weight=700)=>{x.font=`${weight} ${size}px Cairo, Tahoma, sans-serif`;x.fillStyle=color;x.fillText(t,600,y,1060)};
+ x.direction='ltr';line('PN MANCY',150,80,'#00ff66',800);x.direction='rtl';
+ line('شهادة إتمام',270,64,'#ffffff',800);line('تشهد منصة التدريب داخل التطبيق أن',360,34,'#9dbfa8');
+ line(name,470,70,'#00ff66',800);line(`أنهى بنجاح اختبارات ${D.length} درساً في بايثون`,570,38,'#e6f5ea');
+ line('داخل تطبيق PN MANCY التعليمي',640,32,'#9dbfa8');line(new Date().toLocaleDateString('en-GB'),740,30,'#9dbfa8');
+ return c}
+function certificate(){
+ const back=btn('كل الدروس',home),title=el('h2',{textContent:'🎓 شهادة الإتمام'});
+ if(!finished()){app.replaceChildren(back,title,el('p',{textContent:`الشهادة بتتفتح لما تنجح في كل الاختبارات. فاضلك ${D.filter((x,i)=>!done.includes(i)).length} من ${D.length}.`}));return}
+ const input=el('input',{className:'field',placeholder:'اكتب اسمك',maxLength:40}),out=el('div',{});
+ const make=btn('اعمل الشهادة',()=>{const name=input.value.trim();if(!name){out.textContent='اكتب اسمك الأول';return}
+  const c=drawCertificate(name);out.replaceChildren(c,btn('حفظ الصورة',()=>c.toBlob(b=>{const u=URL.createObjectURL(b);el('a',{href:u,download:'pn-mancy-certificate.png'}).click();setTimeout(()=>URL.revokeObjectURL(u),1000)})))});
+ app.replaceChildren(back,title,input,el('div',{className:'tools'},make),out)}
 home();
 // الرجوع من قسم Y-CYBER لا يعيد المقدمة
 if(location.hash==='#home'){document.getElementById('intro').remove();history.replaceState(null,'',location.pathname)}
